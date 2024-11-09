@@ -88,10 +88,7 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import User from "../models/User.js";
-
+// reset password
 export const resetPassword = async (req, res) => {
   const { id, token } = req.params;
   const { password } = req.body;
