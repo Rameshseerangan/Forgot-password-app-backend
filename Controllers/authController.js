@@ -88,21 +88,40 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import User from "../models/User.js";
+
 export const resetPassword = async (req, res) => {
   const { id, token } = req.params;
   const { password } = req.body;
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(400).json({ message: "Invalid Token" });
-    } else {
-      bcrypt
-        .hash(password, 10)
-        .then((hash) => {
-          User.findByIdAndUpdate({ _id: id }, { password: hash })
-            .then((ele) => res.send({ status: "Success" }))
-            .catch((err) => res.send({ status: err }));
-        })
-        .catch((err) => res.send({ status: err }));
+
+  try {
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update the user's password
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { password: hashedPassword },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
     }
-  });
+
+    return res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(400).json({ message: "Token has expired" });
+    }
+    if (error.name === "JsonWebTokenError") {
+      return res.status(400).json({ message: "Invalid Token" });
+    }
+    return res.status(500).json({ message: "Internal server error" });
+  }
 };
